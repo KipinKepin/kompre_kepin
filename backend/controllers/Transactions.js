@@ -39,7 +39,7 @@ export const getTransactionByCif = async (req, res) => {
   try {
     const { cif } = req.params;
 
-    const transaction = await Transactions.findOne({
+    const transaction = await Transactions.findAll({
       where: { cif },
       attributes: [
         "id",
