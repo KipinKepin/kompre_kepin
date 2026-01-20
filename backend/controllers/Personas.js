@@ -3,6 +3,8 @@ import Transactions from "../models/TransactionModel.js";
 import PersonaCategories from "../models/PersonaCategory.js";
 import PersonaUserCategories from "../models/PersonaUserCategory.js";
 import { generateAI } from "../controllers/OllamaClient.js";
+import { safeParseJSON } from "../helper/safeParseJSON.js";
+import { fn, col } from "sequelize";
 
 export const getAllPersonas = async (req, res) => {
   try {
@@ -70,6 +72,56 @@ export const analyzePersonaByCIF = async (req, res) => {
     const persona = await Personas.findByPk(cif);
     if (!persona) {
       return res.status(404).json({ message: "Persona not found" });
+    }
+
+    const latestTransaction = await Transactions.findOne({
+      where: { cif },
+      attributes: [[fn("MAX", col("transaction_date")), "max_date"]],
+      raw: true,
+    });
+
+    const maxTransactionDate = latestTransaction.max_date;
+    if (!maxTransactionDate) {
+      return res.status(400).json({ message: "No transactions found" });
+    }
+
+    const maxTransactionTime = new Date(maxTransactionDate).getTime();
+    const personaTransactionTime = new Date(persona.last_transaction).getTime();
+
+    if (
+      persona.last_transaction &&
+      maxTransactionTime <= personaTransactionTime
+    ) {
+      const cached = await PersonaCategories.findAll({
+        where: { cif },
+        order: [["category_group", "ASC"]],
+      });
+
+      const grouped = {};
+
+      for (const row of cached) {
+        const group = row.category_group;
+
+        if (!grouped[group]) {
+          grouped[group] = {
+            overall_score: null,
+            categories: [],
+          };
+        }
+
+        grouped[group].categories.push({
+          category_name: row.category_name,
+          score: Number(row.score),
+          ...safeParseJSON(row.resultJSON),
+        });
+      }
+
+      return res.json({
+        status: "success",
+        message: "Persona loaded from cache",
+        source: "db",
+        data: grouped,
+      });
     }
 
     const transactions = await Transactions.findAll({
@@ -175,12 +227,13 @@ Format JSON:
       }
     }
 
-    persona.last_transaction = transactions[0].transaction_date;
+    persona.last_transaction = maxTransactionDate;
     await persona.save();
 
     res.json({
       status: "success",
       message: "Persona analyzed successfully",
+      source: "ai",
       data: aiResult,
     });
   } catch (error) {
