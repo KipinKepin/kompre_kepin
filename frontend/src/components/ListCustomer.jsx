@@ -199,7 +199,7 @@ const ListCustomer = () => {
                 <td className="py-4">{cust.name}</td>
                 <td className="py-4">{cust.email}</td>
                 <td className="py-4">{cust.occupation}</td>
-                <td className="py-4">
+                {/* <td className="py-4">
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-semibold ${
                       cust.accountType === "Gold"
@@ -209,7 +209,7 @@ const ListCustomer = () => {
                   >
                     {cust.accountType}
                   </span>
-                </td>
+                </td> */}
                 <td className="py-4">
                   <NavLink
                     to={"/detail"}
