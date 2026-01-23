@@ -1,26 +1,34 @@
 import { DataTypes } from "sequelize";
 import db from "../config/Database.js";
-import Personas from "./PersonaModel.js";
 
-const PersonaUserCategory = db.define("persona_user_cat", {
-  id: {
-    type: DataTypes.BIGINT,
-    autoIncrement: true,
-    primaryKey: true,
+const PersonaUserCategory = db.define(
+  "persona_user_categories",
+  {
+    id: {
+      type: DataTypes.BIGINT,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    category_group: {
+      type: DataTypes.ENUM("fraud", "risk", "marketing", "wealth"),
+      allowNull: false,
+    },
+    category_name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    description: {
+      type: DataTypes.TEXT,
+    },
   },
-  cif: {
-    type: DataTypes.STRING,
-    allowNull: false,
+  {
+    indexes: [
+      {
+        unique: true,
+        fields: ["category_group", "category_name"],
+      },
+    ],
   },
-  category_name: {
-    type: DataTypes.STRING,
-  },
-  description: {
-    type: DataTypes.TEXT,
-  },
-});
-
-Personas.hasMany(PersonaUserCategory, { foreignKey: "cif" });
-PersonaUserCategory.belongsTo(Personas, { foreignKey: "cif" });
+);
 
 export default PersonaUserCategory;

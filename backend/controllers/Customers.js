@@ -6,14 +6,7 @@ import Personas from "../models/PersonaModel.js";
 export const getAllCustomers = async (req, res) => {
   try {
     const customers = await Customers.findAll({
-      attributes: [
-        "cif",
-        "name",
-        "birth_date",
-        "birth_place",
-        "job",
-        "monthly_income",
-      ],
+      attributes: ["cif", "name", "occupation", "monthly_income"],
       order: [["cif", "DESC"]],
     });
     res.status(200).json({
@@ -35,14 +28,7 @@ export const getCustomerByCif = async (req, res) => {
 
     const customer = await Customers.findOne({
       where: { cif },
-      attributes: [
-        "cif",
-        "name",
-        "birth_date",
-        "birth_place",
-        "job",
-        "monthly_income",
-      ],
+      attributes: ["cif", "name", "occupation", "monthly_income"],
       include: [
         {
           model: Personas,

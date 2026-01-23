@@ -5,6 +5,9 @@ import PersonaUserCategories from "../models/PersonaUserCategory.js";
 import { generateAI } from "../controllers/OllamaClient.js";
 import { safeParseJSON } from "../helper/safeParseJSON.js";
 import { fn, col } from "sequelize";
+import Customers from "../models/CustomerModel.js";
+import CustomerProducts from "../models/CustomerProduct.js";
+import Products from "../models/ProductModel.js";
 
 export const getAllPersonas = async (req, res) => {
   try {
@@ -134,9 +137,37 @@ export const analyzePersonaByCIF = async (req, res) => {
       return res.status(400).json({ message: "No transactions found" });
     }
 
-    const userCategories = await PersonaUserCategories.findAll({
+    const allUserCategories = await PersonaUserCategories.findAll();
+
+    // group by category_group
+    const userCategoriesByGroup = allUserCategories.reduce((acc, cat) => {
+      if (!acc[cat.category_group]) acc[cat.category_group] = [];
+      acc[cat.category_group].push({
+        category_name: cat.category_name,
+        description: cat.description,
+      });
+      return acc;
+    }, {});
+
+    const customer = await Customers.findByPk(cif);
+
+    const customerProducts = await CustomerProducts.findAll({
       where: { cif },
+      include: [
+        {
+          model: Products,
+          attributes: ["product_code", "product_name", "product_type"],
+        },
+      ],
     });
+
+    const productSummary = customerProducts.map((p) => ({
+      product_code: p.product.product_code,
+      product_name: p.product.product_name,
+      product_type: p.product.product_type,
+      balance: Number(p.balance),
+      outstanding: Number(p.outstanding),
+    }));
 
     const prompt = `
 Analisa data transaksi nasabah dengan CIF ${cif}.
@@ -148,7 +179,7 @@ Divisi utama:
 - wealth
 
 Kategori tambahan dari user:
-${JSON.stringify(userCategories)}
+${JSON.stringify(userCategoriesByGroup)}
 
 Data transaksi:
 ${JSON.stringify(transactions)}
@@ -220,8 +251,13 @@ Format JSON:
 
         if (cat.source === "user") {
           await PersonaUserCategories.findOrCreate({
-            where: { cif, category_name: cat.category_name },
-            defaults: { description: cat.summary },
+            where: {
+              category_group: division,
+              category_name: cat.category_name,
+            },
+            defaults: {
+              description: cat.summary,
+            },
           });
         }
       }
