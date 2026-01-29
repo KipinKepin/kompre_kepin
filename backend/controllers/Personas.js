@@ -208,7 +208,7 @@ Format JSON:
     ]
   },
   "risk": { "overall_score": 0, "categories": [] },
-  "marketing": { "overall_score": 0, "categories": [] },
+  "marketing": { "overall_score": 0, "categories": [{"category_name": "", "summary": "", "product recommendations": [], "transaction_ids": []}, {}, ...] },
   "wealth": { "overall_score": 0, "categories": [] }
 }
 `;
